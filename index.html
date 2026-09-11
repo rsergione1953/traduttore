@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#120a05">
+  <title>Codex Translator</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=MedievalSharp&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="wood-frame">
+    <div class="codex-card">
+      <h1>  📜 Traduttore  </h1>
+
+      <div class="section-label">1. Lingua in cui parli:</div>
+      <div class="flags-grid" id="input-flags">
+        <button class="flag-btn active" onclick="selectLang('in', 'it-IT', this)">
+          <img src="https://flagcdn.com/w40/it.png" alt="IT">
+        </button>
+        <button class="flag-btn" onclick="selectLang('in', 'en-US', this)">
+          <img src="https://flagcdn.com/w40/gb.png" alt="EN">
+        </button>
+        <button class="flag-btn" onclick="selectLang('in', 'de-DE', this)">
+          <img src="https://flagcdn.com/w40/de.png" alt="DE">
+        </button>
+        <button class="flag-btn" onclick="selectLang('in', 'es-ES', this)">
+          <img src="https://flagcdn.com/w40/es.png" alt="ES">
+        </button>
+        <button class="flag-btn" onclick="selectLang('in', 'fr-FR', this)">
+          <img src="https://flagcdn.com/w40/fr.png" alt="FR">
+        </button>
+      </div>
+
+      <div class="section-label">2. Lingua di risposta:</div>
+      <div class="flags-grid" id="output-flags">
+        <button class="flag-btn" onclick="selectLang('out', 'it', this)">
+          <img src="https://flagcdn.com/w40/it.png" alt="IT">
+        </button>
+        <button class="flag-btn active" onclick="selectLang('out', 'en', this)">
+          <img src="https://flagcdn.com/w40/gb.png" alt="EN">
+        </button>
+        <button class="flag-btn" onclick="selectLang('out', 'de', this)">
+          <img src="https://flagcdn.com/w40/de.png" alt="DE">
+        </button>
+        <button class="flag-btn" onclick="selectLang('out', 'es', this)">
+          <img src="https://flagcdn.com/w40/es.png" alt="ES">
+        </button>
+        <button class="flag-btn" onclick="selectLang('out', 'fr', this)">
+          <img src="https://flagcdn.com/w40/fr.png" alt="FR">
+        </button>
+      </div>
+
+      <button class="btn-action" onclick="avviaAscolto()">🎙️ Tocca e Parla</button>
+
+      <div class="status-text" id="status">Tocca la bandiera per iniziare.</div>
+
+      <div class="manuscript-box">
+        <strong>Testo Riconosciuto:</strong>
+        <span id="testo-originale">...</span>
+      </div>
+
+      <div class="manuscript-box">
+        <strong>Traduzione:</strong>
+        <span id="testo-tradotto">...</span>
+      </div>
+
+      <!-- MARCHIO DI FINE PAGINA -->
+      <div class="brand-footer">SPsoft Versione 1.0</div>
+    
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
