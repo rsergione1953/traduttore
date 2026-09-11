@@ -1,7 +1,7 @@
 let linguaIn = 'it-IT';
 let linguaOut = 'en';
 
-// Gestione selezione lingua tramite le bandiere
+// Gestione selezione lingua tramite i pulsanti
 function selectLang(type, code, btn) {
   const containerId = type === 'in' ? 'input-flags' : 'output-flags';
   document.querySelectorAll(`#${containerId} .flag-btn`).forEach(b => b.classList.remove('active'));
@@ -13,19 +13,19 @@ function selectLang(type, code, btn) {
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-// Funzione principale per l'ascolto dal microfono
+// Ascolto e Traduzione
 function avviaAscolto() {
   const statusLbl = document.getElementById('status');
 
   if (!SpeechRecognition) {
-    alert("Il riconoscimento vocale non è supportato da questo browser. Usa Google Chrome o Safari.");
+    alert("Il riconoscimento vocale non è supportato da questo browser.");
     return;
   }
 
   const recognition = new SpeechRecognition();
-  recognition.lang = linguaIn;
+  recognition.lang = linguaIn; // Ascolta nella lingua selezionata in alto (es. Italiano)
   
-  statusLbl.innerText = "Ascolto la tua voce...";
+  statusLbl.innerText = "Ascolto...";
   recognition.start();
 
   recognition.onresult = async function(event) {
@@ -33,9 +33,15 @@ function avviaAscolto() {
     document.getElementById('testo-originale').innerText = testoParlato;
     statusLbl.innerText = "Traduzione in corso...";
 
-    const traduzione = await traduciTesto(testoParlato, linguaIn.slice(0, 2), linguaOut);
+    // Estraiamo i codici brevi a 2 lettere (es. 'it', 'en', 'de')
+    const langSrc = linguaIn.slice(0, 2);
+    const langTarget = linguaOut.slice(0, 2);
+
+    // Chiamata di traduzione
+    const traduzione = await traduciTesto(testoParlato, langSrc, langTarget);
     document.getElementById('testo-tradotto').innerText = traduzione;
 
+    // Pronuncia la risposta nella LINGUA DI DESTINAZIONE (linguaOut)
     pronunciaTesto(traduzione, linguaOut);
     statusLbl.innerText = "Completato!";
   };
@@ -45,24 +51,32 @@ function avviaAscolto() {
   };
 }
 
-// Chiamata all'API per la traduzione del testo
+// Servizio di Traduzione Affidabile (Google API)
 async function traduciTesto(testo, da, a) {
   try {
-    const res = await fetch("https://libretranslate.org/translate", {
-      method: "POST",
-      body: JSON.stringify({ q: testo, source: da, target: a, format: "text" }),
-      headers: { "Content-Type": "application/json" }
-    });
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${da}&tl=${a}&dt=t&q=${encodeURIComponent(testo)}`;
+    const res = await fetch(url);
     const data = await res.json();
-    return data.translatedText || testo;
+    
+    // Ricompone il testo tradotto
+    if (data && data[0]) {
+      return data[0].map(item => item[0]).join('');
+    }
+    return testo;
   } catch (err) {
+    console.error("Errore traduzione:", err);
     return testo;
   }
 }
 
-// Sintesi vocale (lettura del testo)
+// Sintesi Vocale (Riproduzione Audio)
 function pronunciaTesto(testo, lingua) {
+  // Ferma eventuali riproduzioni precedenti
+  window.speechSynthesis.cancel();
+
   const utterance = new SpeechSynthesisUtterance(testo);
-  utterance.lang = lingua;
+  utterance.lang = lingua; // Forza la voce nella lingua tradotta (es. Inglese, Tedesco)
+  utterance.rate = 0.9;   // Velocità di lettura leggermente più naturale
+
   window.speechSynthesis.speak(utterance);
 }
