@@ -1,6 +1,18 @@
 let linguaIn = 'it-IT';
 let linguaOut = 'en-US';
 
+// Caricamento preventivo delle voci per iOS / Android / Chrome
+let vociDisponibili = [];
+function caricaVoci() {
+  if (typeof speechSynthesis !== 'undefined') {
+    vociDisponibili = speechSynthesis.getVoices();
+  }
+}
+caricaVoci();
+if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = caricaVoci;
+}
+
 function selectLang(type, code, btn) {
   const containerId = type === 'in' ? 'input-flags' : 'output-flags';
   document.querySelectorAll(`#${containerId} .flag-btn`).forEach(b => b.classList.remove('active'));
@@ -20,6 +32,11 @@ function avviaAscolto() {
     return;
   }
 
+  // Sblocca il motore vocale al tocco dell'utente (necessario per Safari/Chrome Mobile)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.resume();
+  }
+
   const recognition = new SpeechRecognition();
   recognition.lang = linguaIn;
   
@@ -31,14 +48,12 @@ function avviaAscolto() {
     document.getElementById('testo-originale').innerText = testoParlato;
     statusLbl.innerText = "Traduzione in corso...";
 
-    // Estraiamo i codici a 2 lettere per la traduzione (es. 'it', 'en')
     const langSrc = linguaIn.slice(0, 2);
     const langTarget = linguaOut.slice(0, 2);
 
     const traduzione = await traduciTesto(testoParlato, langSrc, langTarget);
     document.getElementById('testo-tradotto').innerText = traduzione;
 
-    // Pronuncia con il codice completo (es. 'en-US')
     pronunciaTesto(traduzione, linguaOut);
     statusLbl.innerText = "Completato!";
   };
@@ -64,22 +79,28 @@ async function traduciTesto(testo, da, a) {
 }
 
 function pronunciaTesto(testo, codiceLingua) {
-  window.speechSynthesis.cancel();
+  if (!window.speechSynthesis) return;
+
+  window.speechSynthesis.cancel(); // Pulisce la coda precedente
 
   const utterance = new SpeechSynthesisUtterance(testo);
-  utterance.lang = codiceLingua;
+  const langBreve = codiceLingua.slice(0, 2); // es. "es", "fr"
 
-  // Ricerca forzata della voce corrispondente tra quelle installate nel sistema
-  const voices = window.speechSynthesis.getVoices();
-  const voceTrovata = voices.find(v => v.lang === codiceLingua || v.lang.startsWith(codiceLingua.slice(0, 2)));
-  if (voceTrovata) {
-    utterance.voice = voceTrovata;
+  // Cerca la voce corrispondente (prima esatta, poi per lingua generale)
+  if (vociDisponibili.length === 0) {
+    vociDisponibili = speechSynthesis.getVoices();
   }
 
-  window.speechSynthesis.speak(utterance);
-}
+  const voceTrovata = vociDisponibili.find(v => v.lang === codiceLingua) || 
+                      vociDisponibili.find(v => v.lang.startsWith(langBreve));
 
-// Inizializza l'elenco delle voci nel browser
-if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-  speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  if (voceTrovata) {
+    utterance.voice = voceTrovata;
+    utterance.lang = voceTrovata.lang;
+  } else {
+    utterance.lang = codiceLingua;
+  }
+
+  utterance.rate = 0.9;
+  window.speechSynthesis.speak(utterance);
 }
