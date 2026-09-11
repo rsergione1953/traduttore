@@ -1,25 +1,17 @@
 let linguaIn = 'it-IT';
 let linguaOut = 'en-US';
 
-// Caricamento preventivo delle voci per iOS / Android / Chrome
-let vociDisponibili = [];
-function caricaVoci() {
-  if (typeof speechSynthesis !== 'undefined') {
-    vociDisponibili = speechSynthesis.getVoices();
-  }
-}
-caricaVoci();
-if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-  speechSynthesis.onvoiceschanged = caricaVoci;
-}
-
+// Cambia la lingua attiva quando si clicca su una bandiera
 function selectLang(type, code, btn) {
   const containerId = type === 'in' ? 'input-flags' : 'output-flags';
   document.querySelectorAll(`#${containerId} .flag-btn`).forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 
-  if (type === 'in') linguaIn = code;
-  else linguaOut = code;
+  if (type === 'in') {
+    linguaIn = code;
+  } else {
+    linguaOut = code;
+  }
 }
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -28,12 +20,13 @@ function avviaAscolto() {
   const statusLbl = document.getElementById('status');
 
   if (!SpeechRecognition) {
-    alert("Riconoscimento vocale non supportato dal browser.");
+    alert("Riconoscimento vocale non supportato da questo browser.");
     return;
   }
 
-  // Sblocca il motore vocale al tocco dell'utente (necessario per Safari/Chrome Mobile)
-  if (window.speechSynthesis) {
+  // Interrompe e sblocca subito la sintesi vocale se sta ancora parlando
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
     window.speechSynthesis.resume();
   }
 
@@ -48,13 +41,18 @@ function avviaAscolto() {
     document.getElementById('testo-originale').innerText = testoParlato;
     statusLbl.innerText = "Traduzione in corso...";
 
+    // Codici a 2 lettere per Google Translate (es. "it", "en", "es")
     const langSrc = linguaIn.slice(0, 2);
     const langTarget = linguaOut.slice(0, 2);
 
     const traduzione = await traduciTesto(testoParlato, langSrc, langTarget);
     document.getElementById('testo-tradotto').innerText = traduzione;
 
-    pronunciaTesto(traduzione, linguaOut);
+    // Pronuncia con ritardo per dare tempo al sistema di resettare l'audio
+    setTimeout(() => {
+      pronunciaTesto(traduzione, linguaOut);
+    }, 150);
+
     statusLbl.innerText = "Completato!";
   };
 
@@ -63,6 +61,7 @@ function avviaAscolto() {
   };
 }
 
+// Chiamata all'API di traduzione
 async function traduciTesto(testo, da, a) {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${da}&tl=${a}&dt=t&q=${encodeURIComponent(testo)}`;
@@ -78,29 +77,40 @@ async function traduciTesto(testo, da, a) {
   }
 }
 
+// Pronuncia audio guidata e forzata sulla lingua corretta
 function pronunciaTesto(testo, codiceLingua) {
-  if (!window.speechSynthesis) return;
+  if (!('speechSynthesis' in window)) return;
 
-  window.speechSynthesis.cancel(); // Pulisce la coda precedente
+  // Svuota forzatamente la coda audio
+  window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(testo);
-  const langBreve = codiceLingua.slice(0, 2); // es. "es", "fr"
+  
+  // Assegna PRIMA la lingua obbligatoria
+  utterance.lang = codiceLingua;
 
-  // Cerca la voce corrispondente (prima esatta, poi per lingua generale)
-  if (vociDisponibili.length === 0) {
-    vociDisponibili = speechSynthesis.getVoices();
+  // Recupera le voci disponibili sul dispositivo al momento
+  const voci = window.speechSynthesis.getVoices();
+  const langBreve = codiceLingua.slice(0, 2);
+
+  if (voci && voci.length > 0) {
+    // Cerca prima la voce esatta (es. es-ES), altrimenti qualsiasi voce della stessa lingua (es. es-MX)
+    const voceTrovata = voci.find(v => v.lang === codiceLingua) || 
+                        voci.find(v => v.lang.startsWith(langBreve));
+
+    if (voceTrovata) {
+      utterance.voice = voceTrovata;
+      utterance.lang = voceTrovata.lang;
+    }
   }
 
-  const voceTrovata = vociDisponibili.find(v => v.lang === codiceLingua) || 
-                      vociDisponibili.find(v => v.lang.startsWith(langBreve));
-
-  if (voceTrovata) {
-    utterance.voice = voceTrovata;
-    utterance.lang = voceTrovata.lang;
-  } else {
-    utterance.lang = codiceLingua;
-  }
-
-  utterance.rate = 0.9;
+  utterance.rate = 0.9; // Velocità naturale
   window.speechSynthesis.speak(utterance);
+}
+
+// Inizializza l'elenco voci all'apertura del browser
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
 }
